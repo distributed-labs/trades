@@ -37,6 +37,14 @@ services:
       - zookeeper
       - kafka
 
+  schema-registry:
+    image: confluentinc/cp-schema-registry
+    ports:
+      - 8081:8081
+    depends_on:
+      - zookeeper
+      - kafka
+
   control-center:
     image: confluentinc/cp-enterprise-control-center
 
@@ -51,3 +59,5 @@ services:
     depends_on:
       - zookeeper
       - kafka
+      - ksql
+      - schema-registry
