@@ -1,0 +1,11 @@
+{
+  "name": "Trade",
+  "namespace": "stock",
+  "type": "record",
+  "fields": [
+    {
+      "name": "id",
+      "type": "string"
+    }
+  ]
+}

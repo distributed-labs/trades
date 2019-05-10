@@ -1,13 +1,17 @@
 package com.singleton.trades.config;
 
+import static java.util.Collections.singletonMap;
+
+import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerde;
 import java.util.Properties;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.StreamsConfig;
-import org.apache.kafka.streams.Topology;
+import org.apache.kafka.streams.kstream.Consumed;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import stock.Trade;
 
 @Configuration
 public class KafkaConfiguration {
@@ -15,24 +19,33 @@ public class KafkaConfiguration {
   @Bean
   public KafkaStreams kafkaStreams() {
     final var props = new Properties();
-    props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, "broker:9092");
+    props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, "kafka:9092");
     props.put(StreamsConfig.APPLICATION_ID_CONFIG, "streams-pipe");
-    props.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass());
-    props.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Serdes.String().getClass());
+    props
+        .put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.Long().getClass());
+    props.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, SpecificAvroSerde.class);
+    props.put("schema.registry.url", "http://schema-registry:8081");
 
-    final var kafkaStreams = new KafkaStreams(kafkaTopology(), props);
-    kafkaStreams.start();
+    final var serdeConfig = singletonMap(
+        "schema.registry.url",
+        "http://schema-registry:8081"
+    );
 
-    return kafkaStreams;
-  }
+    try (final var valueSerde = new SpecificAvroSerde<Trade>()) {
+      valueSerde.configure(serdeConfig, false);
 
-  @Bean
-  public Topology kafkaTopology() {
-    final var streamsBuilder = new StreamsBuilder();
+      final var streamsBuilder = new StreamsBuilder();
+      streamsBuilder
+          .stream("trades", Consumed.with(Serdes.Long(), valueSerde))
+          .to("rich-trades");
 
-    streamsBuilder.stream("trades").to("trades-values");
+      final var topology = streamsBuilder.build();
 
-    return streamsBuilder.build();
+      final var kafkaStreams = new KafkaStreams(topology, props);
+      kafkaStreams.start();
+
+      return kafkaStreams;
+    }
   }
 
 }
