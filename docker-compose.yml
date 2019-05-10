@@ -2,7 +2,6 @@ version: '2'
 services:
   zookeeper:
     image: confluentinc/cp-zookeeper:5.2.1
-    hostname: zookeeper
     container_name: zookeeper
     ports:
       - "2181:2181"
@@ -10,10 +9,9 @@ services:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
 
-  kakfa:
+  kafka:
     image: confluentinc/cp-enterprise-kafka:5.2.1
-    hostname: kakfa
-    container_name: kakfa
+    container_name: kafka
     depends_on:
       - zookeeper
     ports:
@@ -35,11 +33,10 @@ services:
 
   schema-registry:
     image: confluentinc/cp-schema-registry:5.2.1
-    hostname: schema-registry
     container_name: schema-registry
     depends_on:
       - zookeeper
-      - kakfa
+      - kafka
     ports:
       - "8081:8081"
     environment:
@@ -48,11 +45,10 @@ services:
 
   control-center:
     image: confluentinc/cp-enterprise-control-center:5.2.1
-    hostname: control-center
     container_name: control-center
     depends_on:
       - zookeeper
-      - kakfa
+      - kafka
       - schema-registry
     ports:
       - "9021:9021"
