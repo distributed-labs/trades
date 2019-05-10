@@ -19,16 +19,16 @@ public class KafkaConfiguration {
   @Bean
   public KafkaStreams kafkaStreams() {
     final var props = new Properties();
-    props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, "kafka:9092");
+    props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
     props.put(StreamsConfig.APPLICATION_ID_CONFIG, "streams-pipe");
     props
         .put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.Long().getClass());
     props.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, SpecificAvroSerde.class);
-    props.put("schema.registry.url", "http://schema-registry:8081");
+    props.put("schema.registry.url", "http://localhost:8081");
 
     final var serdeConfig = singletonMap(
         "schema.registry.url",
-        "http://schema-registry:8081"
+        "http://localhost:8081"
     );
 
     try (final var valueSerde = new SpecificAvroSerde<Trade>()) {
