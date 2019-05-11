@@ -2,15 +2,14 @@ package com.singleton.trades.config;
 
 import static java.util.Collections.singletonMap;
 
+import com.singleton.trades.processor.TradeProcessor;
 import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerde;
 import java.util.Properties;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.KafkaStreams;
-import org.apache.kafka.streams.KeyValue;
-import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.StreamsConfig;
-import org.apache.kafka.streams.kstream.Consumed;
-import org.apache.kafka.streams.kstream.Produced;
+import org.apache.kafka.streams.Topology;
+import org.apache.kafka.streams.state.Stores;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import stock.RichTrade;
@@ -34,31 +33,37 @@ public class KafkaConfiguration {
         "http://localhost:8081"
     );
 
+    final var amountCounter = Stores.keyValueStoreBuilder(
+        Stores.persistentKeyValueStore("AmountCounter"), Serdes.Integer(), Serdes.Double()
+    );
+
+    final var averageCounter = Stores.keyValueStoreBuilder(
+        Stores.persistentKeyValueStore("AverageCounter"), Serdes.Integer(), Serdes.Double()
+    );
+
     try (final var valueSerde = new SpecificAvroSerde<Trade>()) {
       try (final var richValueSerde = new SpecificAvroSerde<RichTrade>()) {
         valueSerde.configure(serdeConfig, false);
         richValueSerde.configure(serdeConfig, false);
 
-        final var streamsBuilder = new StreamsBuilder();
-        streamsBuilder
-            .stream("trades", Consumed.with(Serdes.Long(), valueSerde))
-            .map((key, value) -> new KeyValue<>(
-                key,
-                // TODO: replace by mapper library call
-                RichTrade
-                    .newBuilder()
-                    .setAccount(value.getAccount())
-                    .setAmount(value.getAmount())
-                    .setTicker(value.getTicker())
-                    .setCurrency(value.getCurrency())
-                    .setDateTime(value.getDateTime())
-                    .setPrice(value.getPrice())
-                    .setValue(value.getPrice() * value.getAmount())
-                    .build()
-            ))
-            .to("rich-trades", Produced.with(Serdes.Long(), richValueSerde));
-
-        final var topology = streamsBuilder.build();
+        final var topology = new Topology();
+        topology
+            .addSource(
+                "Source",
+                Serdes.Long().deserializer(),
+                valueSerde.deserializer(),
+                "trades"
+            )
+            .addProcessor("Processor", TradeProcessor::new, "Source")
+            .addStateStore(amountCounter, "Processor")
+            .addStateStore(averageCounter, "Processor")
+            .addSink(
+                "Destination",
+                "rich-trades",
+                Serdes.Long().serializer(),
+                richValueSerde.serializer(),
+                "Processor"
+            );
 
         final var kafkaStreams = new KafkaStreams(topology, props);
         kafkaStreams.start();

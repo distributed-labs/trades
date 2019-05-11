@@ -30,6 +30,10 @@
     {
       "name": "value",
       "type": "double"
+    },
+    {
+      "name": "pnl",
+      "type": "double"
     }
   ]
 }
