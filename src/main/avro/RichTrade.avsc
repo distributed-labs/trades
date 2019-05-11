@@ -1,5 +1,5 @@
 {
-  "name": "Trade",
+  "name": "RichTrade",
   "namespace": "stock",
   "type": "record",
   "fields": [
@@ -26,6 +26,10 @@
     {
       "name": "dateTime",
       "type": "long"
+    },
+    {
+      "name": "value",
+      "type": "double"
     }
   ]
 }
