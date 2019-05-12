@@ -41,6 +41,10 @@ public class KafkaConfiguration {
         Stores.persistentKeyValueStore("AverageCounter"), Serdes.Integer(), Serdes.Double()
     );
 
+    final var positions = Stores.keyValueStoreBuilder(
+        Stores.persistentKeyValueStore("Positions"), Serdes.Integer(), Serdes.String()
+    );
+
     try (final var valueSerde = new SpecificAvroSerde<Trade>()) {
       try (final var richValueSerde = new SpecificAvroSerde<RichTrade>()) {
         valueSerde.configure(serdeConfig, false);
@@ -57,6 +61,7 @@ public class KafkaConfiguration {
             .addProcessor("Processor", TradeProcessor::new, "Source")
             .addStateStore(amountCounter, "Processor")
             .addStateStore(averageCounter, "Processor")
+            .addStateStore(positions, "Processor")
             .addSink(
                 "Destination",
                 "rich-trades",

@@ -3,6 +3,7 @@ package com.singleton.trades.processor;
 import static java.lang.Math.abs;
 import static java.lang.Math.signum;
 
+import java.util.UUID;
 import org.apache.kafka.streams.processor.Processor;
 import org.apache.kafka.streams.processor.ProcessorContext;
 import org.apache.kafka.streams.state.KeyValueStore;
@@ -13,6 +14,7 @@ public class TradeProcessor implements Processor<Long, Trade> {
 
   private KeyValueStore<Integer, Double> amountCounter;
   private KeyValueStore<Integer, Double> averageCounter;
+  private KeyValueStore<Integer, String> positions;
 
   private ProcessorContext context;
 
@@ -21,6 +23,7 @@ public class TradeProcessor implements Processor<Long, Trade> {
   public void init(ProcessorContext context) {
     amountCounter = (KeyValueStore<Integer, Double>) context.getStateStore("AmountCounter");
     averageCounter = (KeyValueStore<Integer, Double>) context.getStateStore("AverageCounter");
+    positions = (KeyValueStore<Integer, String>) context.getStateStore("Positions");
     this.context = context;
   }
 
@@ -43,6 +46,7 @@ public class TradeProcessor implements Processor<Long, Trade> {
 
     var currentAmount = amountCounter.get(compositeKey);
     var currentAverage = averageCounter.get(compositeKey); // Current average needs to calculate
+    var currentPosition = positions.get(compositeKey);
     // PnL
 
     if (currentAmount == null) {
@@ -54,6 +58,13 @@ public class TradeProcessor implements Processor<Long, Trade> {
     if (currentAverage == null) {
       currentAverage = 0D;
     }
+
+    if (currentPosition == null || currentAmount == 0D) {
+      currentPosition = UUID.randomUUID().toString();
+      positions.put(compositeKey, currentPosition);
+    }
+
+    richTradeBuilder.setPositionId(currentPosition);
 
     if (signum(currentAmount) == signum(value.getAmount()) || signum(currentAmount) == 0) {
       currentAverage = (

@@ -4,6 +4,10 @@
   "type": "record",
   "fields": [
     {
+      "name": "positionId",
+      "type": "string"
+    },
+    {
       "name": "account",
       "type": "long"
     },
